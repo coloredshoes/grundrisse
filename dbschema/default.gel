@@ -1,0 +1,59 @@
+module default {
+    # User type for admin authentication
+    type User {
+        required property username -> str {
+            constraint exclusive;
+        };
+        required property password_hash -> str;
+        property created_at -> datetime {
+            default := datetime_current();
+        };
+    }
+
+    # Source type for content sources (YouTube channels, RSS feeds, etc.)
+    type Source {
+        required property name -> str;
+        required property type -> str {
+            constraint one_of('youtube', 'rss', 'podcast', 'substack', 'bluesky');
+        };
+        required property url -> str;
+        property is_active -> bool {
+            default := true;
+        };
+        property created_at -> datetime {
+            default := datetime_current();
+        };
+        property updated_at -> datetime {
+            default := datetime_current();
+        };
+        
+        # Index for efficient queries
+        index on (.type);
+        index on (.is_active);
+    }
+
+    # Video/Content metadata (for future indexing epic)
+    type Content {
+        required property title -> str;
+        property description -> str;
+        property url -> str;
+        property duration -> duration;
+        property published_at -> datetime;
+        property transcript -> str;
+        
+        # Link to the source
+        required link source -> Source;
+        
+        property created_at -> datetime {
+            default := datetime_current();
+        };
+        
+        # Full-text search index (combined title and description)
+        index fts::index on (
+            fts::with_options(
+                .title ++ ' ' ++ .description,
+                language := fts::Language.por
+            )
+        );
+    }
+}
