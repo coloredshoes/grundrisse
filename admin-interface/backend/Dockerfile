@@ -1,10 +1,17 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install uv for faster dependency management
+RUN pip install uv
 
+# Copy project files
+COPY ../../pyproject.toml ../../uv.lock* ./
+
+# Install dependencies
+RUN uv pip install --system -e .
+
+# Copy backend source code
 COPY . .
 
 EXPOSE 8000
