@@ -2,3 +2,6 @@ watch = []
 
 [instance]
 server-version = "6.10"
+
+[hooks]
+schema.update.after = "uv run gel-py --dir admin-interface/backend/sources/queries --file admin-interface/backend/sources/queries.py && uv run gel-py --dir admin-interface/backend/auth/queries --file admin-interface/backend/auth/queries.py"

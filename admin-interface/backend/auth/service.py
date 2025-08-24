@@ -1,4 +1,4 @@
-"""Authentication service with JWT token management."""
+"""Auth service with authentication and JWT management."""
 
 import hashlib
 from datetime import datetime, timedelta
@@ -11,6 +11,10 @@ from antidote import injectable, inject
 
 from config import AuthConfig
 from database import DatabaseService
+from auth.models import User
+
+# Import generated queries
+from auth.queries import authenticate_user
 
 
 security = HTTPBearer()
@@ -18,10 +22,10 @@ security = HTTPBearer()
 
 @injectable
 class AuthService:
-    """Authentication service for JWT token management."""
+    """Authentication service with JWT token management."""
     
     def __init__(
-        self,
+        self, 
         config: AuthConfig = inject[AuthConfig],
         db: DatabaseService = inject[DatabaseService]
     ):
@@ -31,12 +35,17 @@ class AuthService:
     def create_access_token(self, data: dict) -> str:
         """Create JWT access token."""
         to_encode = data.copy()
-        expire = datetime.now(datetime.UTC) + timedelta(hours=self.config.access_token_expire_hours)
+        expire = datetime.utcnow() + timedelta(hours=self.config.access_token_expire_hours)
         to_encode.update({"exp": expire})
-        encoded_jwt = jwt.encode(to_encode, self.config.secret_key, algorithm=self.config.algorithm)
+        
+        encoded_jwt = jwt.encode(
+            to_encode, 
+            self.config.secret_key, 
+            algorithm=self.config.algorithm
+        )
         return encoded_jwt
     
-    async def verify_token(self, credentials: HTTPAuthorizationCredentials) -> str:
+    def verify_token(self, credentials: HTTPAuthorizationCredentials) -> str:
         """Verify JWT token and return username."""
         try:
             payload = jwt.decode(
@@ -51,18 +60,19 @@ class AuthService:
         except JWTError:
             raise HTTPException(status_code=401, detail="Invalid token")
     
-    async def authenticate_user(self, username: str, password: str) -> Optional[dict]:
+    async def authenticate_user_login(self, username: str, password: str) -> Optional[User]:
         """Authenticate user with username and password."""
         password_hash = hashlib.sha256(password.encode()).hexdigest()
         
         client = await self.db.get_client()
-        user = await client.query_single("""
-            SELECT User {
-                username
-            }
-            FILTER .username = <str>$username AND .password_hash = <str>$password_hash
-        """, username=username, password_hash=password_hash)
+        users = await authenticate_user(
+            client,
+            username=username,
+            password_hash=password_hash
+        )
         
-        if user:
-            return {"username": user.username}
+        if users:
+            # authenticate_user returns a list, get the first user
+            user = users[0]
+            return User(username=user.username)
         return None

@@ -8,7 +8,9 @@ from antidote import world
 # Import config first to ensure .env is loaded
 from config import AppConfig
 from database import DatabaseService
-from routes import auth, sources
+# Import modular routes
+from auth.routes import router as auth_router
+from sources.routes import router as sources_router
 
 
 def create_app() -> FastAPI:
@@ -31,8 +33,8 @@ def create_app() -> FastAPI:
     )
     
     # Include routers
-    app.include_router(auth.router)
-    app.include_router(sources.router)
+    app.include_router(auth_router)
+    app.include_router(sources_router)
     
     return app
 

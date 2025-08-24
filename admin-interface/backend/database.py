@@ -6,6 +6,9 @@ import edgedb
 from antidote import injectable, inject
 from config import DatabaseConfig
 
+# Import generated queries
+from queries.create_user_async_edgeql import create_user
+
 
 @injectable
 class DatabaseService:
@@ -37,12 +40,11 @@ class DatabaseService:
         """Initialize database with default data."""
         client = await self.get_client()
         
-        # Create default admin user if it doesn't exist
+        # Create default admin user if it doesn't exist using generated query
         password_hash = hashlib.sha256("admin123".encode()).hexdigest()
         
-        await client.query("""
-            INSERT User {
-                username := 'admin',
-                password_hash := <str>$password_hash
-            } UNLESS CONFLICT ON .username
-        """, password_hash=password_hash)
+        await create_user(
+            client,
+            username="admin",
+            password_hash=password_hash
+        )
